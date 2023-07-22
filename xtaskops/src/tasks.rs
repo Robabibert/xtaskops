@@ -82,7 +82,7 @@ pub fn ci() -> AnyResult<()> {
 /// # Errors
 /// Fails if any command fails
 ///
-pub fn coverage(devmode: bool) -> AnyResult<()> {
+pub fn coverage(fmt: &str) -> AnyResult<()> {
     remove_dir("coverage")?;
     create_dir_all("coverage")?;
 
@@ -95,11 +95,14 @@ pub fn coverage(devmode: bool) -> AnyResult<()> {
     println!("ok.");
 
     println!("=== generating report ===");
-    let (fmt, file) = if devmode {
-        ("html", "coverage/html")
-    } else {
-        ("lcov", "coverage/tests.lcov")
-    };
+    let file = match fmt {
+        "html" => Ok("coverage/html"),
+        "lcov" => Ok("coverage/tests.lcov"),
+        "json" => Ok("coverage/tests.json"),
+        _ => Err(anyhow::Error::msg(
+            "Please provide a valid output file format",
+        )),
+    }?;
     cmd!(
         "grcov",
         ".",
@@ -128,13 +131,6 @@ pub fn coverage(devmode: bool) -> AnyResult<()> {
     println!("=== cleaning up ===");
     clean_files("**/*.profraw")?;
     println!("ok.");
-    if devmode {
-        if confirm("open report folder?") {
-            cmd!("open", file).run()?;
-        } else {
-            println!("report location: {file}");
-        }
-    }
 
     Ok(())
 }
@@ -265,11 +261,11 @@ pub fn main() -> AnyResult<()> {
         .setting(AppSettings::SubcommandRequiredElseHelp)
         .subcommand(
             Command::new("coverage").arg(
-                Arg::new("dev")
-                    .short('d')
-                    .long("dev")
-                    .help("generate an html report")
-                    .takes_value(false),
+                Arg::new("fmt")
+                    .short('f')
+                    .long("format")
+                    .help("choose the format in which the coverage files are generated.\n Valid options are [html,lcov,json]")
+                    .takes_value(true),
             ),
         )
         .subcommand(Command::new("vars"))
@@ -300,7 +296,10 @@ pub fn main() -> AnyResult<()> {
 
     let root = crate::ops::root_dir();
     let res = match matches.subcommand() {
-        Some(("coverage", sm)) => crate::tasks::coverage(sm.is_present("dev")),
+        Some(("coverage", sm)) => crate::tasks::coverage(
+            sm.get_one::<String>("fmt")
+                .context("please provide an output file format")?,
+        ),
         Some(("vars", _)) => {
             println!("root: {root:?}");
             Ok(())
