@@ -2,7 +2,7 @@
 //! Complete xtask tasks such as `docs`, `ci` and others
 //!
 use crate::ops::{clean_files, remove_dir};
-use anyhow::{Context, Ok, Result as AnyResult};
+use anyhow::{Context, Result as AnyResult};
 use derive_builder::Builder;
 use duct::cmd;
 use std::fs::create_dir_all;
