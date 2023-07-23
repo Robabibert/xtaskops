@@ -1,8 +1,8 @@
 //!
 //! Complete xtask tasks such as `docs`, `ci` and others
 //!
-use crate::ops::{clean_files, confirm, remove_dir};
-use anyhow::{Context, Result as AnyResult};
+use crate::ops::{clean_files, remove_dir};
+use anyhow::{Context, Ok, Result as AnyResult};
 use derive_builder::Builder;
 use duct::cmd;
 use std::fs::create_dir_all;
@@ -90,21 +90,24 @@ pub fn coverage(fmt: &str) -> AnyResult<()> {
     cmd!("cargo", "test")
         .env("CARGO_INCREMENTAL", "0")
         .env("RUSTFLAGS", "-Cinstrument-coverage")
-        .env("LLVM_PROFILE_FILE", "cargo-test-%p-%m.profraw")
+        .env("LLVM_PROFILE_FILE", "coverage/cargo-test-%p-%m.profraw")
         .run()?;
     println!("ok.");
 
+    if fmt == "profraw" {
+        return Ok(());
+    }
     println!("=== generating report ===");
     let file = match fmt {
         "html" => Ok("coverage/html"),
         "lcov" => Ok("coverage/tests.lcov"),
-        _ => Err(anyhow::Error::msg(
-            "Please provide a valid output file format",
-        )),
+        _ => Err(anyhow::Error::msg(format!(
+            "Please provide a valid output file format found : {fmt}"
+        ))),
     }?;
     cmd!(
         "grcov",
-        ".",
+        "./coverage",
         "--binary-path",
         "./target/debug/deps",
         "-s",
@@ -133,20 +136,7 @@ pub fn coverage(fmt: &str) -> AnyResult<()> {
 
     Ok(())
 }
-/// Run coverage for nvim-coverage
-pub fn nvim_coverage() -> AnyResult<()> {
-    remove_dir("coverage")?;
-    create_dir_all("coverage")?;
 
-    println!("=== running coverage ===");
-    cmd!("cargo", "test")
-        .env("CARGO_INCREMENTAL", "0")
-        .env("RUSTFLAGS", "-Cinstrument-coverage")
-        .env("LLVM_PROFILE_FILE", "cargo-test-%p-%m.profraw")
-        .run()?;
-    println!("ok.");
-    Ok(())
-}
 /// Build a powerset test
 #[derive(Builder)]
 #[builder(setter(into))]
@@ -276,12 +266,9 @@ pub fn main() -> AnyResult<()> {
                 Arg::new("fmt")
                     .short('f')
                     .long("format")
-                    .help("choose the format in which the coverage files are generated.\n Valid options are [html,lcov,json]")
+                    .help("choose the format in which the coverage files are generated.\n Valid options are [html,lcov,profraw]")
                     .takes_value(true),
             ),
-        )
-.subcommand(
-            Command::new("nvim_coverage"),
         )
         .subcommand(Command::new("vars"))
         .subcommand(Command::new("ci"))
