@@ -98,7 +98,6 @@ pub fn coverage(fmt: &str) -> AnyResult<()> {
     let file = match fmt {
         "html" => Ok("coverage/html"),
         "lcov" => Ok("coverage/tests.lcov"),
-        "json" => Ok("coverage/tests.json"),
         _ => Err(anyhow::Error::msg(
             "Please provide a valid output file format",
         )),
@@ -134,7 +133,20 @@ pub fn coverage(fmt: &str) -> AnyResult<()> {
 
     Ok(())
 }
+/// Run coverage for nvim-coverage
+pub fn nvim_coverage() -> AnyResult<()> {
+    remove_dir("coverage")?;
+    create_dir_all("coverage")?;
 
+    println!("=== running coverage ===");
+    cmd!("cargo", "test")
+        .env("CARGO_INCREMENTAL", "0")
+        .env("RUSTFLAGS", "-Cinstrument-coverage")
+        .env("LLVM_PROFILE_FILE", "cargo-test-%p-%m.profraw")
+        .run()?;
+    println!("ok.");
+    Ok(())
+}
 /// Build a powerset test
 #[derive(Builder)]
 #[builder(setter(into))]
@@ -267,6 +279,9 @@ pub fn main() -> AnyResult<()> {
                     .help("choose the format in which the coverage files are generated.\n Valid options are [html,lcov,json]")
                     .takes_value(true),
             ),
+        )
+.subcommand(
+            Command::new("nvim_coverage"),
         )
         .subcommand(Command::new("vars"))
         .subcommand(Command::new("ci"))
