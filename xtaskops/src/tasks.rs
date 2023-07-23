@@ -86,11 +86,16 @@ pub fn coverage(fmt: &str) -> AnyResult<()> {
     remove_dir("coverage")?;
     create_dir_all("coverage")?;
 
+    let llvm_profile_file = if fmt == "profraw" {
+        "coverage/cargo-test-%p-%m.profraw"
+    } else {
+        "cargo-test-%p-%m.profraw"
+    };
     println!("=== running coverage ===");
     cmd!("cargo", "test")
         .env("CARGO_INCREMENTAL", "0")
         .env("RUSTFLAGS", "-Cinstrument-coverage")
-        .env("LLVM_PROFILE_FILE", "coverage/cargo-test-%p-%m.profraw")
+        .env("LLVM_PROFILE_FILE", llvm_profile_file)
         .run()?;
     println!("ok.");
 
@@ -107,7 +112,7 @@ pub fn coverage(fmt: &str) -> AnyResult<()> {
     }?;
     cmd!(
         "grcov",
-        "./coverage",
+        ".",
         "--binary-path",
         "./target/debug/deps",
         "-s",
@@ -123,7 +128,7 @@ pub fn coverage(fmt: &str) -> AnyResult<()> {
         "--ignore",
         "xtask/*",
         "--ignore",
-        "*/src/tests/*",
+        "./src/tests/*",
         "-o",
         file,
     )
@@ -132,6 +137,7 @@ pub fn coverage(fmt: &str) -> AnyResult<()> {
 
     println!("=== cleaning up ===");
     clean_files("**/*.profraw")?;
+    //clean_files("**/*.profraw")?;
     println!("ok.");
 
     Ok(())
