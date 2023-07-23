@@ -74,6 +74,18 @@ where
     opts.overwrite = overwrite;
     fsx::dir::copy(from, to, &opts).map_err(anyhow::Error::msg)
 }
+///
+/// Move entire folder contents
+pub fn move_contents<P, Q>(from: P, to: Q, overwrite: bool) -> AnyResult<u64>
+where
+    P: AsRef<Path>,
+    Q: AsRef<Path>,
+{
+    let mut opts = CopyOptions::new();
+    opts.content_only = true;
+    opts.overwrite = overwrite;
+    fsx::dir::move_dir(from, to, &opts).map_err(anyhow::Error::msg)
+}
 
 ///
 /// Prompt the user to confirm an action
