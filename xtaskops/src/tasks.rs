@@ -1,7 +1,9 @@
 //!
 //! Complete xtask tasks such as `docs`, `ci` and others
 //!
-use crate::ops::{clean_files, remove_dir};
+use crate::ops::{
+    clean_files, get_clean_directory, get_workspace_root, nearest_cargo_dir, remove_dir,
+};
 use anyhow::{Context, Result as AnyResult};
 use derive_builder::Builder;
 use duct::cmd;
@@ -83,54 +85,46 @@ pub fn ci() -> AnyResult<()> {
 /// Fails if any command fails
 ///
 pub fn coverage(fmt: &str) -> AnyResult<()> {
-    remove_dir("coverage")?;
-    create_dir_all("coverage")?;
+    let root = nearest_cargo_dir()?;
+    let workspace_root = get_workspace_root()?;
 
-    let llvm_profile_file = if fmt == "profraw" {
-        "coverage/cargo-test-%p-%m.profraw"
-    } else {
-        "cargo-test-%p-%m.profraw"
-    };
+    let coverage_dir = root.join("target/coverage");
+    get_clean_directory(&coverage_dir)?;
+    let profile_files = coverage_dir.join("cargo-test-%p-%m.profraw");
+    let binary_folder = workspace_root.join("target/debug/deps");
+    let source_dir = root.join("src");
+
     println!("=== running coverage ===");
-    cmd!("cargo", "test")
+    cmd!("cargo", "test", "--all-features")
         .env("CARGO_INCREMENTAL", "0")
         .env("RUSTFLAGS", "-Cinstrument-coverage")
-        .env("LLVM_PROFILE_FILE", llvm_profile_file)
+        .env("LLVM_PROFILE_FILE", profile_files.as_path())
         .run()?;
+
     println!("ok.");
 
     if fmt == "profraw" {
         return Ok(());
     }
     println!("=== generating report ===");
-    let file = match fmt {
-        "html" => Ok("coverage/html"),
-        "lcov" => Ok("coverage/tests.lcov"),
+    let output_folder = match fmt {
+        "html" | "lcov" => Ok(coverage_dir.clone()),
         _ => Err(anyhow::Error::msg(format!(
             "Please provide a valid output file format found : {fmt}"
         ))),
     }?;
+    create_dir_all(output_folder.clone())?;
     cmd!(
         "grcov",
-        ".",
+        coverage_dir,
         "--binary-path",
-        "./target/debug/deps",
-        "-s",
-        ".",
-        "-t",
+        binary_folder,
+        "--source-dir",
+        source_dir,
+        "--output-types",
         fmt,
-        "--branch",
-        "--ignore-not-existing",
-        "--ignore",
-        "../*",
-        "--ignore",
-        "/*",
-        "--ignore",
-        "xtask/*",
-        "--ignore",
-        "./src/tests/*",
         "-o",
-        file,
+        output_folder,
     )
     .run()?;
     println!("ok.");
