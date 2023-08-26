@@ -85,18 +85,19 @@ pub fn ci() -> AnyResult<()> {
 /// Fails if any command fails
 ///
 pub fn coverage(fmt: &str) -> AnyResult<()> {
-    let root = nearest_cargo_dir()?;
+    let project_root = nearest_cargo_dir()?;
     let workspace_root = get_workspace_root()?;
 
-    let coverage_dir = root.join("target/coverage");
+    let coverage_dir = project_root.join("target/coverage");
     get_clean_directory(&coverage_dir)?;
+
     let profile_files = coverage_dir.join("cargo-test-%p-%m.profraw");
-    let binary_folder = workspace_root.join("target/debug/deps");
-    let source_dir = root.join("src");
+    let binary_folder = workspace_root.join("target");
+    let source_dir = project_root.join("src");
 
     println!("=== running coverage ===");
     cmd!("cargo", "test", "--all-features")
-        .env("CARGO_INCREMENTAL", "0")
+        .env("CARGO_TARGET_DIR", binary_folder.clone())
         .env("RUSTFLAGS", "-Cinstrument-coverage")
         .env("LLVM_PROFILE_FILE", profile_files.as_path())
         .run()?;
@@ -123,6 +124,14 @@ pub fn coverage(fmt: &str) -> AnyResult<()> {
         source_dir,
         "--output-types",
         fmt,
+        "--branch",
+        "--ignore-not-existing",
+        "--ignore",
+        "../*",
+        "--ignore",
+        "/*",
+        "--ignore",
+        "xtask/*",
         "-o",
         output_folder,
     )
