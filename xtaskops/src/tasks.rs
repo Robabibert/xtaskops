@@ -2,7 +2,7 @@
 //! Complete xtask tasks such as `docs`, `ci` and others
 //!
 use crate::ops::{
-    clean_files, get_clean_directory, get_workspace_root, nearest_cargo_dir, remove_dir,
+    clean_files, get_clean_directory, get_workspace_root, nearest_cargo_dir,
 };
 use anyhow::{Context, Result as AnyResult};
 use derive_builder::Builder;
