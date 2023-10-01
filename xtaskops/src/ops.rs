@@ -153,10 +153,14 @@ pub fn nearest_cargo_dir() -> Result<PathBuf, io::Error> {
         "Ran out of places to find Cargo.toml",
     ))
 }
+pub fn get_cargo_metadata() -> AnyResult<serde_json::Value> {
+    let metadata = cmd!("cargo", "metadata", "--format-version", "1").read()?;
+    let metadata: Value = serde_json::from_str(&metadata)?;
+    Ok(metadata)
+}
 pub fn get_workspace_root() -> AnyResult<PathBuf> {
-    let metadata = cmd!("cargo", "metadata").read()?;
-    let json: Value = serde_json::from_str(&metadata)?;
-    let path = json
+    let metadata = get_cargo_metadata()?;
+    let path = metadata
         .get(&"workspace_root")
         .ok_or(anyhow!("Deserialization error"))?
         .to_string()
