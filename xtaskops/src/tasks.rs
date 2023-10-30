@@ -86,7 +86,7 @@ pub fn coverage(fmt: &str) -> AnyResult<()> {
     let project_root = nearest_cargo_dir()?;
     let workspace_root = get_workspace_root()?;
 
-    let coverage_dir = project_root.join("target/coverage");
+    let coverage_dir = project_root.join("coverage");
     get_clean_directory(&coverage_dir)?;
 
     let profile_files = coverage_dir.join("cargo-test-%p-%m.profraw");
