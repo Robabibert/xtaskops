@@ -93,7 +93,6 @@ pub fn coverage(fmt: &str) -> AnyResult<()> {
     let binary_folder = workspace_root.join("target");
     let source_dir = project_root.join("src");
 
-    println!("=== running coverage ===");
     cmd!("cargo", "test", "--all-features")
         .env("CARGO_TARGET_DIR", binary_folder.clone())
         .env("RUSTFLAGS", "-Cinstrument-coverage")
