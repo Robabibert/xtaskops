@@ -11,7 +11,6 @@ use glob::glob;
 use serde_json::Value;
 use std::{
     env,
-    ffi::OsString,
     fs::{create_dir_all, read_dir, remove_dir_all},
     io::{self, ErrorKind},
     path::{Path, PathBuf},
@@ -37,15 +36,13 @@ pub fn clean_files(pattern: &str) -> AnyResult<()> {
 pub fn get_clean_directory(path: &PathBuf) -> io::Result<()> {
     if !path.exists() {
         create_dir_all(path)
+    } else if path.is_dir() {
+        remove_dir_all(path)
     } else {
-        if path.is_dir() {
-            remove_dir_all(path)
-        } else {
-            Err(io::Error::new(
-                ErrorKind::NotADirectory,
-                "path is not a directory",
-            ))
-        }
+        Err(io::Error::new(
+            ErrorKind::NotADirectory,
+            "path is not a directory",
+        ))
     }
 }
 
@@ -138,12 +135,10 @@ pub fn root_dir() -> PathBuf {
 /// .Return the closest anchestor containing a Cargo.toml file
 pub fn nearest_cargo_dir() -> Result<PathBuf, io::Error> {
     let path = env::current_dir()?;
-    let mut path_ancestors = path.as_path().ancestors();
+    let path_ancestors = path.as_path().ancestors();
 
-    while let Some(p) = path_ancestors.next() {
-        let has_cargo = read_dir(p)?
-            .into_iter()
-            .any(|p| p.unwrap().file_name() == OsString::from("Cargo.toml"));
+    for p in path_ancestors {
+        let has_cargo = !read_dir(p)?.all(|p| p.unwrap().file_name() != *"Cargo.toml");
         if has_cargo {
             return Ok(PathBuf::from(p));
         }
@@ -153,18 +148,24 @@ pub fn nearest_cargo_dir() -> Result<PathBuf, io::Error> {
         "Ran out of places to find Cargo.toml",
     ))
 }
-pub fn get_cargo_metadata() -> AnyResult<serde_json::Value> {
+
+pub(crate) fn get_cargo_metadata() -> AnyResult<serde_json::Value> {
     let metadata = cmd!("cargo", "metadata", "--format-version", "1").read()?;
     let metadata: Value = serde_json::from_str(&metadata)?;
     Ok(metadata)
 }
+/// .
+/// Returns the root of the workspace
+/// # Errors
+///
+/// This function will return an error if the workspace could not be found.
 pub fn get_workspace_root() -> AnyResult<PathBuf> {
     let metadata = get_cargo_metadata()?;
     let path = metadata
-        .get(&"workspace_root")
+        .get("workspace_root")
         .ok_or(anyhow!("Deserialization error"))?
         .to_string()
-        .replace("\"", "");
+        .replace('\"', "");
 
     Ok(PathBuf::from_str(&path)?)
 }
