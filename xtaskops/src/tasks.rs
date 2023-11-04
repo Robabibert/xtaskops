@@ -107,7 +107,7 @@ pub fn coverage(fmt: &str) -> AnyResult<()> {
     }
     println!("=== generating report ===");
     let output_folder = match fmt {
-        "html" | "lcov" => Ok(coverage_dir.clone()),
+        "html" | "lcov" | "cobertura" => Ok(coverage_dir.clone()),
         _ => Err(anyhow::Error::msg(format!(
             "Please provide a valid output file format found : {fmt}"
         ))),
