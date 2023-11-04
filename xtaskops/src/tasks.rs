@@ -76,7 +76,7 @@ pub fn ci() -> AnyResult<()> {
     CIBuilder::default().run()
 }
 
-fn cobertura_total_coverage(context: &str) -> Result<(), anyhow::Error> {
+fn cobertura_total_coverage(context: &str) -> AnyResult<()> {
     let total_coverage_string = cmd!(
         "xmllint",
         "--xpath",
