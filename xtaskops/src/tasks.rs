@@ -76,15 +76,16 @@ pub fn ci() -> AnyResult<()> {
     CIBuilder::default().run()
 }
 
-fn cobertura_total_coverage(context: &str) -> AnyResult<()> {
-    let total_coverage_string = cmd!(
+fn cobertura_total_coverage(filename: &str) -> AnyResult<()> {
+    let total_coverage: f32 = cmd!(
         "xmllint",
         "--xpath",
-        "concat('Coverage: ', 100 * string(//coverage/@line-rate), '%')",
-        context
+        "string(//coverage/@line-rate)",
+        filename
     )
-    .read()?;
-    println!("{}", total_coverage_string);
+    .read()?
+    .parse()?;
+    println!("Coverage: {:.2}%", total_coverage);
     Ok(())
 }
 
