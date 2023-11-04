@@ -85,7 +85,7 @@ fn cobertura_total_coverage(filename: &str) -> AnyResult<()> {
     )
     .read()?
     .parse()?;
-    println!("Coverage: {:.2}%", total_coverage);
+    println!("Coverage: {:.2}%", 100f32 * total_coverage);
     Ok(())
 }
 
