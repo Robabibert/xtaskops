@@ -2,7 +2,7 @@
 //! Complete xtask tasks such as `docs`, `ci` and others
 //!
 use crate::ops::{clean_files, get_clean_directory, get_workspace_root, nearest_cargo_dir};
-use anyhow::{Context, Result as AnyResult};
+use anyhow::{Context, Ok, Result as AnyResult};
 use derive_builder::Builder;
 use duct::cmd;
 use std::fs::create_dir_all;
@@ -76,6 +76,17 @@ pub fn ci() -> AnyResult<()> {
     CIBuilder::default().run()
 }
 
+fn cobertura_total_coverage(context: &str) -> Result<(), anyhow::Error> {
+    let total_coverage_string = cmd!(
+        "xmllint",
+        "--xpath",
+        "concat('Coverage: ', 100 * string(//coverage/@line-rate), '%')",
+        context
+    )
+    .read()?;
+    println!("{}", total_coverage_string);
+    Ok(())
+}
 ///
 /// Run coverage
 ///
@@ -112,6 +123,7 @@ pub fn coverage(fmt: &str) -> AnyResult<()> {
             "Please provide a valid output file format found : {fmt}"
         ))),
     }?;
+
     create_dir_all(output_folder.clone())?;
     cmd!(
         "grcov",
@@ -276,6 +288,14 @@ pub fn main() -> AnyResult<()> {
                     .help("choose the format in which the coverage files are generated.\n Valid options are [html,lcov,profraw]")
                     .takes_value(true),
             ),
+        ).subcommand(
+            Command::new("cobertura_total_coverage").arg(
+                Arg::new("file")
+                    .short('f')
+                    .long("file")
+                    .help("Set cobertura file")
+                    .takes_value(true),
+            ),
         )
         .subcommand(Command::new("vars"))
         .subcommand(Command::new("ci"))
@@ -308,6 +328,10 @@ pub fn main() -> AnyResult<()> {
         Some(("coverage", sm)) => crate::tasks::coverage(
             sm.get_one::<String>("fmt")
                 .context("please provide an output file format")?,
+        ),
+        Some(("cobertura_total_coverage", sm)) => crate::tasks::cobertura_total_coverage(
+            sm.get_one::<String>("file")
+                .context("please provide an input file ")?,
         ),
         Some(("vars", _)) => {
             println!("root: {root:?}");
