@@ -2,7 +2,7 @@
 //! Complete xtask tasks such as `docs`, `ci` and others
 //!
 use crate::ops::{clean_files, get_clean_directory, get_workspace_root, nearest_cargo_dir};
-use anyhow::{Context, Ok, Result as AnyResult};
+use anyhow::{Context, Result as AnyResult};
 use derive_builder::Builder;
 use duct::cmd;
 use std::fs::create_dir_all;
@@ -87,6 +87,7 @@ fn cobertura_total_coverage(context: &str) -> AnyResult<()> {
     println!("{}", total_coverage_string);
     Ok(())
 }
+
 ///
 /// Run coverage
 ///
